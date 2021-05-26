@@ -14,6 +14,10 @@ import VideocamIcon from '@material-ui/icons/Videocam';
 import MicIcon from '@material-ui/icons/Mic';
 import MicOffIcon from '@material-ui/icons/MicOff';
 import * as hark from 'hark';
+import Button from '@material-ui/core/Button';
+import CallIcon from '@material-ui/icons/Call';
+import AcceptCall from '@material-ui/icons/PhoneEnabled';
+import RejectCall from '@material-ui/icons/PhoneDisabled'
 
 const Demo = props => (
   <ScriptTag type="text/javascript" defer src="/client/src/components/face-api.min.js" />
@@ -50,21 +54,21 @@ function Call() {
     const [mute, unMute] = useState(true);
     const [enableVideo, setEnableVideo] = useState(true);
     const [visible, setVisible] = useState ();
+    const [candidateEmotion, setCandidateEmotion] = useState([]);
 
     const auth = useSelector(state => state.auth)
     
     const {user, isLogged, isAdmin} = auth
     const dispatch = useDispatch()
-
     
     const userVideo = useRef();
     const partnerVideo = useRef();
     const socket = useRef();
     const videoRef = useRef();
-    const canvasRef = useRef();
     const endPoint = 'http://localhost:5000'
     var userName;
-  
+    var allEmotions = [];
+
     useEffect(() => {
       console.log("heyyyyyyyyyyyyyyyyyyyyyyyy",user.name)
       socket.current = io.connect(endPoint, { transports: ['websocket'] ,upgrade: false });
@@ -114,7 +118,7 @@ function Call() {
       socket.current.on('createMessage', message => {
         // console.log('this is coming from server')
         $('ul').append(`<li class = "message">
-            <b id = "a"> ${user.name} </b>
+            <b id = "a"> User </b>
             <br/>
             ${message}
         </li>`);
@@ -205,11 +209,19 @@ function Call() {
       var options = {}
       var speechEvents = hark(stream, options)
       speechEvents.on('speaking', function() {
-        console.log('Speaking!')
         setInterval(async () => {
           const detections = await faceapi.detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceExpressions()
-        }, 3000)
+          let values = detections[0]
+          let emotions = values?.expressions
+          let sortedEmotions = emotions?.asSortedArray()
+          if (typeof sortedEmotions !== 'undefined') {
+            console.log(sortedEmotions[0])
+            let dominantEmotion = sortedEmotions[0]
+            allEmotions.push(dominantEmotion)
+          }
+        }, 5000)
       })
+      
     }
   
     function acceptCall() {
@@ -262,11 +274,29 @@ function Call() {
       incomingCall = (
         <div className = "incomingCall" >
           <div className="header">
-            <h1>{caller} is calling you</h1>
+            <h3>{isAdmin ? "Candidate" : "Interviewer"} is calling you</h3>
           </div>
           <div className="buttons">
-            <button className="left__button" onClick={acceptCall}>Accept</button>
-            <button className="right__button" onClick={rejectCall}>Reject</button>
+            <Button
+              startIcon={<AcceptCall />}
+              color="primary"
+              className="left__button"
+              onClick={acceptCall}
+              variant="contained"
+            >
+              Accept
+            </Button>
+            {/* <button className="left__button" onClick={acceptCall}>Accept</button>
+            <button className="right__button" onClick={rejectCall}>Reject</button> */}
+            <Button
+              startIcon={<RejectCall />}
+              color="primary"
+              className="right__button"
+              onClick={rejectCall}
+              variant="contained"
+            >
+              Reject
+            </Button>
           </div>
         </div>
       )
@@ -385,9 +415,23 @@ function Call() {
               if (key === yourID ) {
                 return null;
               }
-              return (
-                <button onClick={() => callPeer(key)}>Call {key}</button>
-              );
+              if(isAdmin) {
+                return (
+                  <Button
+                    startIcon={<CallIcon />}
+                    onClick={() => callPeer(key)}
+                    color="primary"
+                    variant="contained"
+                  >
+                    {isAdmin ? "Call Candidate" : "Call Interviewer"}
+                  </Button>
+                )
+              }
+              if(!isAdmin) {
+                return (
+                  null
+                );
+              }
             })}
             {incomingCall}
          </div>

@@ -67,7 +67,7 @@ function Call() {
     const videoRef = useRef();
     const endPoint = 'http://localhost:5000'
     var userName;
-    var allEmotions = [];
+    var scoredEmotions = [];
 
     useEffect(() => {
       console.log("heyyyyyyyyyyyyyyyyyyyyyyyy",user.name)
@@ -215,9 +215,15 @@ function Call() {
           let emotions = values?.expressions
           let sortedEmotions = emotions?.asSortedArray()
           if (typeof sortedEmotions !== 'undefined') {
-            console.log(sortedEmotions[0])
             let dominantEmotion = sortedEmotions[0]
-            allEmotions.push(dominantEmotion)
+            if (dominantEmotion.expression == 'angry' || dominantEmotion.expression == 'disgusted' || dominantEmotion.expression == 'fearful'
+              || dominantEmotion.expression == 'sad' || dominantEmotion.expression == 'surprised') {
+                dominantEmotion.score = 0
+            }
+            else if (dominantEmotion.expression == 'happy' || dominantEmotion.expression == 'neutral') {
+              dominantEmotion.score = 5
+            }
+            scoredEmotions.push(dominantEmotion)
           }
         }, 5000)
       })
@@ -349,6 +355,7 @@ function Call() {
     var playStop_btn_class = enableVideo ? "fas fa-video" : "stop fas fa-video-slash";
 
     const reloadVideo= () => {
+      setCandidateEmotion(scoredEmotions)
       if(isAdmin){
         history.push('/admin')
         window.location.reload(false);
